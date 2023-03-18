@@ -22,7 +22,18 @@ frappe.query_reports["Employee Check In Out"] = {
 			"label": "End Date",
 			"fieldtype": "Date",
 			"reqd": 1
+		},
+		{
+			"fieldname":"company",
+			"label": "Company",
+			"fieldtype": "Link",
+			"options": "Company",
+		},
+		{
+			"fieldname":"department",
+			"label": "Department",
+			"fieldtype": "Link",
+			"options": "Department",
 		}
-
 	]
 };

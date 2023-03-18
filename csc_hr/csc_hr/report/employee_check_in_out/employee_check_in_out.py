@@ -3,26 +3,38 @@
 
 import frappe
 
-def execute(filters=None):
-        data = get_data(filters.employee, filters.start_date, filters.end_date)
+def execute(filters = None):
+        data = get_data(filters.employee, filters.start_date, filters.end_date, filters.company, filters.department)
         columns = get_columns()
         return columns, data
 
-def get_data(employee = "HR-EMP-00008", start_date="2023-01-01", end_date="2023-03-14"):
+def get_data(employee, start_date, end_date, company = None, department = None):
+        attendance_filters = [
+            ["Attendance", "attendance_date", "between", [start_date, end_date]],
+            ["Attendance", "docstatus", "=", "1"],
+            ["Attendance", "employee", "=", employee]
+        ]
+        timesheet_filters = [                   
+            ["Timesheet", "start_date", ">=", start_date],
+            ["Timesheet", "end_date", "<=", end_date],
+            ["Timesheet", "employee", "=", employee],
+            ["Timesheet", "status", "=", "Submitted"]
+        ]
+
+        attendance_fields = ["attendance_date", "employee", "company", "department","working_hours", "name", "shift_hour"]
+        if company:
+            attendance_filters.append(["Attendance", "company", "=", company])
+        if department:
+            attendance_filters.append(["Attendance", "department", "=", department])
         result = []
         attendance_list = frappe.get_all(
                                         "Attendance",
-                                        filters = [["Attendance", "attendance_date", "between", [start_date, end_date]],
-                                                   ["Attendance", "docstatus", "=", "1"],
-                                                   ["Attendance", "employee", "=", employee]],
-                                        fields = ["attendance_date", "employee", "company", "department","working_hours", "name"]
+                                        filters = attendance_filters,
+                                        fields = attendance_fields
                                         )
         timesheet_list = frappe.get_all(
                                     "Timesheet",
-                                    filters = [["Timesheet", "start_date", ">=", start_date],
-                                               ["Timesheet", "end_date", "<=", end_date],
-                                               ["Timesheet", "employee", "=", employee],
-                                               ["Timesheet", "status", "=", "Submitted"]],
+                                    filters = timesheet_filters,
                                     fields = ["name"]
                                     )
         for i in attendance_list:
@@ -38,17 +50,21 @@ def get_data(employee = "HR-EMP-00008", start_date="2023-01-01", end_date="2023-
                                                     )
                 total_hours = 0
                 if (len(timesheet_child_list) > 0):
-                    i.update({"timesheet": j.name})
+                    i.update({
+                        "is_overtime": 1,
+                        "timesheet": j.name,
+                        "activity_type": "Over Time"
+                        })
                 else:
                     continue
                 for k in timesheet_child_list:
                         total_hours += k.hours
                 total_timesheet_hr += total_hours
-            overtime_hours = i.working_hours - 8.0
-            balance_overtime_hours = overtime_hours - total_timesheet_hr
+            excess_hours = i.working_hours - i.shift_hour
+            balance_overtime_hours = total_timesheet_hr - excess_hours
             i.update({
-                    "activity_hours": total_timesheet_hr,
-                    "overtime_hours": overtime_hours,
+                    "overtime_hours": total_timesheet_hr,
+                    "excess_hours": excess_hours,
                     "balance_overtime_hours": balance_overtime_hours,
             })
             result.append(i)
@@ -88,22 +104,27 @@ def get_columns():
                 "width": 0
                 },
                 {
-                "fieldname": "activity_type",
-                "fieldtype": "Link",
-                "label": "Activity Type",
-                "options": "Employee Checkin",
+                "fieldname": "is_overtime",
+                "fieldtype": "Data",
+                "label": "Overtime",
                 "width": 0
                 },
                 {
-                "fieldname": "activity_hours",
-                "fieldtype": "Float",
-                "label": "Activity Hours",
+                "fieldname": "activity_type",
+                "fieldtype": "Data",
+                "label": "Activity Type",
                 "width": 0
                 },
                 {
                 "fieldname": "overtime_hours",
                 "fieldtype": "Float",
                 "label": "Overtime Hours",
+                "width": 0
+                },
+                {
+                "fieldname": "excess_hours",
+                "fieldtype": "Float",
+                "label": "Excess Hours",
                 "width": 0
                 },
                 {
