@@ -37,8 +37,7 @@ def get_timesheets(start_date, end_date, employee = None, company = None, depart
 	timesheet_filters = [
 						["Timesheet", "start_date", ">=", start_date],
 						["Timesheet", "end_date", "<=", end_date],
-						["Timesheet", "status", "=", "Submitted"],
-						["Timesheet", "is_overtime", "=", 1]
+						["Timesheet", "status", "=", "Submitted"]
 						]
 	if employee:
 		timesheet_filters.append(["Timesheet", "employee", "=", employee])
@@ -71,7 +70,7 @@ def get_timesheet_details(timesheet_parent, attendance_date):
 	td_filters = [
 				["Timesheet Detail", "parent", "=", timesheet_parent],
 				["Timesheet Detail", "from_time", "between", [attendance_date, attendance_date]],
-				["Timesheet Detail", "activity_type", "=", "Over Time"]
+				["Timesheet Detail", "is_overtime", "=", 1]
 				]
 	td_fields = ["activity_type", "hours", "name"]
 
